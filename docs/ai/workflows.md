@@ -84,3 +84,17 @@ To verify how the platform executes a connector:
   # Run Write (verifies streaming record ingestion using configuration and catalog)
   docker run --rm -v $(pwd)/secrets:/secrets -v $(pwd)/integration_tests:/integration_tests airbyte/destination-clickhouse:dev --write --config /secrets/config.json --catalog /integration_tests/configured_catalog.json
   ```
+
+---
+
+## Staging CI/CD Pipeline
+
+The repository includes an automated staging pipeline configured for GitHub Actions and Docker Hub.
+
+### 1. Triggering Deployment
+- Push or merge changes into the **`staging`** branch.
+- This triggers `.github/workflows/deploy-staging.yml` which builds the target connector, publishes the image to Docker Hub tagged as `:staging`, and logs into the staging VPS via SSH to run a pulling restart.
+
+### 2. VPS Setup (Traefik-Integrated)
+- The staging VPS runs Traefik, Portainer, and Docker.
+- To configure the connector container stack on the VPS, use the template at [docker-compose.staging.yml](../../docker-compose.staging.yml) which integrates automatically with the Traefik public load-balancer.
