@@ -1,5 +1,5 @@
 # Airbyte Staging Connectors Deployment Stack (Traefik Integrated)
-# Put this file on your VPS under the directory configured in ${{ secrets.STAGING_DEPLOY_PATH }}
+# Put this file on your VPS under: /home/vmxclaw/airbyte-staging/docker-compose.yml
 
 version: '3.8'
 
@@ -7,24 +7,23 @@ services:
   # Clickhouse Destination Connector Staging Service
   destination-clickhouse:
     # Pulls the staging image built by GitHub Actions and pushed to Docker Hub
-    image: ${DOCKER_USERNAME:-yourusername}/destination-clickhouse:staging
+    image: membeedev/destination-clickhouse:staging
     container_name: airbyte-destination-clickhouse-staging
     restart: always
     environment:
       - MICRONAUT_ENVIRONMENTS=staging
       # Add database or target server variables here
     networks:
-      - traefik-public # Joins your existing Traefik network
+      - traefik # Joins your existing Traefik network
 
     # Traefik labels to automatically discover, route, and provision SSL for the container
     labels:
       - "traefik.enable=true"
-      # IMPORTANT: Replace staging.yourdomain.com with your actual staging subdomain
-      - "traefik.http.routers.airbyte-clickhouse-staging.rule=Host(`clickhouse.staging.yourdomain.com`)"
+      - "traefik.http.routers.airbyte-clickhouse-staging.rule=Host(`1connector.hub.vn`)"
       - "traefik.http.routers.airbyte-clickhouse-staging.entrypoints=websecure"
       - "traefik.http.routers.airbyte-clickhouse-staging.tls=true"
-      # If your Traefik uses Let's Encrypt, uncomment and configure your resolver below:
-      # - "traefik.http.routers.airbyte-clickhouse-staging.tls.certresolver=le-ssl"
+      # If your Traefik setup uses a specific certificate resolver, uncomment and specify it below:
+      # - "traefik.http.routers.airbyte-clickhouse-staging.tls.certresolver=letsencrypt"
       
       # Since Airbyte connectors are run on-demand or expose a health check port if configured,
       # specify the internal port that Traefik should proxy traffic to (e.g. 8000 or custom port):
@@ -32,5 +31,5 @@ services:
 
 networks:
   # Reference your existing Traefik network so this stack can communicate with Traefik
-  traefik-public:
+  traefik:
     external: true
