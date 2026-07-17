@@ -28,7 +28,7 @@ jobs:
 
       - name: Build & Publish Clickhouse Connector Image
         run: |
-          ./gradlew :airbyte-integrations:connectors:destination-clickhouse:airbyteDocker
+          ./gradlew :airbyte-integrations:connectors:destination-clickhouse:dockerBuildx
           docker tag airbyte/destination-clickhouse:dev ${{ secrets.DOCKER_USERNAME }}/destination-clickhouse:staging
           docker push ${{ secrets.DOCKER_USERNAME }}/destination-clickhouse:staging
 
