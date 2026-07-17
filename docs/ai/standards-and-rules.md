@@ -32,3 +32,4 @@ When submitting pull requests to `Gena-AI/airbyte` (or upstream):
 - **Anti-pattern 1: Blind CDK upgrades.** Never change dependencies or CDK versions unless instructed. Keep gradle properties pinned.
 - **Anti-pattern 2: Manual instantiation in DI.** Avoid instantiating classes annotated with `@Singleton` manually. Use `@Inject` constructor injection.
 - **Anti-pattern 3: Large PRs.** Keep PRs bounded to a single connector or single component. Large files lead to merge conflicts.
+- **Anti-pattern 4: Overcomplicating database writes.** Do not write custom raw JDBC connections or standalone SQL executions inside a connector's ingestion flow. Always use the Bulk CDK-provided `StreamLoader`, `TableOperationsClient`, and `InsertBuffer` interfaces to manage writing lifecycles.

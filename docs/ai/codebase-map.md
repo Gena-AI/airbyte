@@ -6,6 +6,8 @@ Use this map to instantly locate source files, CDK implementations, and develope
 
 ```
 airbyte/
+├── .claude/                                 # Custom Claude CLI skills and developer automation
+│   └── skills/my-prs/                       # Custom daily pull request tracking skill
 ├── AI.md                                    # AI entry-point router
 ├── airbyte-cdk/                             # Connector Development Kits (CDK)
 │   ├── java/                                # Legacy Java CDK
@@ -40,3 +42,7 @@ airbyte/
 
 ### 3. Developer Guides (`connector-writer/destination/`)
 - A highly complete reference for writing Destination Connectors with the Dataflow CDK. Refer to these files when building new Kotlin connectors.
+
+### 4. Custom Claude CLI Skills (`.claude/`)
+- Houses custom automation scripts and instructions for developer terminal environments.
+- Features the `my-prs` custom skill under `.claude/skills/my-prs/` which provides a comprehensive command dashboard for tracking and managing open pull requests.

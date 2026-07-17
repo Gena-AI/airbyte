@@ -79,3 +79,8 @@ To verify how the platform executes a connector:
   ```bash
   docker run --rm -v $(pwd)/secrets:/secrets airbyte/destination-clickhouse:dev --check --config /secrets/config.json
   ```
+- Run Write (verifies streaming record ingestion using configuration and catalog):
+  ```bash
+  # Run Write (verifies streaming record ingestion using configuration and catalog)
+  docker run --rm -v $(pwd)/secrets:/secrets -v $(pwd)/integration_tests:/integration_tests airbyte/destination-clickhouse:dev --write --config /secrets/config.json --catalog /integration_tests/configured_catalog.json
+  ```

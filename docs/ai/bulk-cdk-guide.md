@@ -48,6 +48,12 @@ Bulk CDK uses Micronaut for DI. This prevents boilerplate code but requires stri
 ### 2. Custom Factory Pattern
 - Use factory classes annotated with `@Factory` to instantiate third-party database drivers or complex connection pools.
 
+### 3. Resolving Common Micronaut Injection Failures
+- **Unsatisfied Dependency (No Bean Found):** Occurs when Micronaut cannot locate an implementation for an injected interface or class.
+  - *Fix:* Verify the target class is annotated with `@Singleton` and any conditional qualifiers (like `@Requires(...)`) are properly configured and evaluate to true.
+- **Non-Unique Bean Definition (Multiple Beans Found):** Occurs when multiple registered beans implement the same interface.
+  - *Fix:* Decorate the preferred implementation with `@Primary`, or use `@Named("name")` qualifiers at both declaration and injection sites, or specify `@Replaces(DefaultImplementation::class)` to override a bean.
+
 ---
 
 ## The Three Testing Contexts
