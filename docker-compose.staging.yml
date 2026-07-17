@@ -1,33 +1,27 @@
-# Airbyte Staging Connectors Deployment Stack (Traefik Integrated)
+# Airbyte Staging Platform Deployment Stack (Traefik Integrated)
 # Put this file on your VPS under: /home/vmxclaw/airbyte-staging/docker-compose.yml
 
 version: '3.8'
 
 services:
-  # Clickhouse Destination Connector Staging Service
-  destination-clickhouse:
-    # Pulls the staging image built by GitHub Actions and pushed to Docker Hub
-    image: membeedev/destination-clickhouse:staging
-    container_name: airbyte-destination-clickhouse-staging
+  # Airbyte Platform Web UI Reverse Proxy Service
+  airbyte-platform-proxy:
+    image: alpine/socat
+    container_name: airbyte-platform-proxy
     restart: always
-    environment:
-      - MICRONAUT_ENVIRONMENTS=staging
-      # Add database or target server variables here
+    # Socat listens on container port 80 and forwards TCP requests to host gateway IP 172.17.0.1 on port 8010 (abctl Airbyte Platform port)
+    command: tcp-listen:80,fork,reuseaddr tcp:172.17.0.1:8010
     networks:
-      - traefik # Joins your existing Traefik network
+      - traefik
 
-    # Traefik labels to automatically discover, route, and provision SSL for the container
+    # Traefik labels to automatically discover, route, and provision SSL for the Airbyte Platform UI!
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.airbyte-clickhouse-staging.rule=Host(`1connector.hub.vn`)"
-      - "traefik.http.routers.airbyte-clickhouse-staging.entrypoints=websecure"
-      - "traefik.http.routers.airbyte-clickhouse-staging.tls=true"
-      # If your Traefik setup uses a specific certificate resolver, uncomment and specify it below:
-      # - "traefik.http.routers.airbyte-clickhouse-staging.tls.certresolver=letsencrypt"
-      
-      # Since Airbyte connectors are run on-demand or expose a health check port if configured,
-      # specify the internal port that Traefik should proxy traffic to (e.g. 8000 or custom port):
-      - "traefik.http.services.airbyte-clickhouse-staging.loadbalancer.server.port=8000"
+      - "traefik.http.routers.airbyte-platform.rule=Host(`1connector.hub.vn`)"
+      - "traefik.http.routers.airbyte-platform.entrypoints=websecure"
+      - "traefik.http.routers.airbyte-platform.tls=true"
+      # Specifying the internal port of this socat container
+      - "traefik.http.services.airbyte-platform.loadbalancer.server.port=80"
 
 networks:
   # Reference your existing Traefik network so this stack can communicate with Traefik
