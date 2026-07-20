@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airbyte Platform Container & Orchestration Visualizer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070a13;
+            --bg-vps: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.4);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --secondary: #c084fc;
+            --secondary-glow: rgba(192, 132, 252, 0.4);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.4);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-outfit: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --glass-blur: blur(12px);
+            --border-glow: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, rgba(192, 132, 252, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: var(--font-outfit);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(7, 10, 19, 0.8);
+            backdrop-filter: var(--glass-blur);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--bg-dark);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--accent);
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ffffff, #38bdf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        /* Simulator Dashboard Frame */
+        .simulator-grid {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 2.5rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (max-width: 1024px) {
+            .simulator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .canvas-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-glow);
+            border-radius: 2rem;
+            padding: 2.5rem;
+            backdrop-filter: var(--glass-blur);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        /* VPS Host Outer Visual */
+        .vps-box {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            position: relative;
+            margin-top: 1.5rem;
+            min-height: 480px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .vps-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Container Categories */
+        .plane-section {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            background: rgba(5, 8, 16, 0.4);
+            position: relative;
+        }
+
+        .plane-section.permanent {
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        .plane-section.ephemeral {
+            border-color: rgba(192, 132, 252, 0.2);
+            min-height: 180px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .plane-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plane-title.blue { color: var(--primary); }
+        .plane-title.purple { color: var(--secondary); }
+
+        /* Container Grid Layouts */
+        .containers-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Container Block Styling */
+        .container-block {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .container-block.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .container-block .icon {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .container-block .name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .container-block .status-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            margin-right: 4px;
+            box-shadow: 0 0 6px var(--accent-glow);
+        }
+
+        .container-block .state-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Dynamic Connector Containers (Ephemeral) */
+        .dynamic-connector-box {
+            display: flex;
+            gap: 3rem;
+            align-items: center;
+            width: 100%;
+            justify-content: center;
+            opacity: 0.15;
+            transform: scale(0.95);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dynamic-connector-box.running {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .dynamic-container {
+            width: 160px;
+            border: 2px solid var(--secondary);
+            background: rgba(168, 85, 247, 0.1);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+            border-radius: 1rem;
+            padding: 1.25rem 0.75rem;
+            text-align: center;
+            position: relative;
+            animation: containerGlow 2s infinite alternate;
+        }
+
+        @keyframes containerGlow {
+            0% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.15); border-color: rgba(192, 132, 252, 0.7); }
+            100% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.35); border-color: rgba(192, 132, 252, 1); }
+        }
+
+        .dynamic-container.destination {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.08);
+            animation: containerGlowGreen 2s infinite alternate;
+        }
+
+        @keyframes containerGlowGreen {
+            0% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.7); }
+            100% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.35); border-color: rgba(16, 185, 129, 1); }
+        }
+
+        .dynamic-container .badge {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--secondary);
+            color: var(--bg-dark);
+            font-weight: 700;
+            font-size: 0.65rem;
+            padding: 1px 8px;
+            border-radius: 99px;
+            text-transform: uppercase;
+        }
+
+        .dynamic-container.destination .badge {
+            background: var(--accent);
+        }
+
+        .dynamic-container .icon {
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dynamic-container .name {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .dynamic-container .image-tag {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            word-break: break-all;
+            margin-top: 0.25rem;
+        }
+
+        /* Floating Data Packets */
+        .data-pipe {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            flex-grow: 1;
+            position: relative;
+            max-width: 150px;
+        }
+
+        .data-pipe.active {
+            background: linear-gradient(to right, var(--secondary), var(--accent));
+        }
+
+        .data-packet {
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            position: absolute;
+            top: -4px;
+            left: 0;
+            box-shadow: 0 0 8px var(--primary-glow);
+            opacity: 0;
+        }
+
+        .data-pipe.active .data-packet {
+            animation: flowData 1.5s infinite linear;
+            opacity: 1;
+        }
+
+        @keyframes flowData {
+            0% { left: 0%; background-color: var(--secondary); filter: drop-shadow(0 0 6px var(--secondary-glow)); }
+            100% { left: 100%; background-color: var(--accent); filter: drop-shadow(0 0 6px var(--accent-glow)); }
+        }
+
+        /* Sidebar Control Panel */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .action-card {
+            background: rgba(30, 41, 59, 0.35);
+            border: 1px solid var(--border-glow);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .action-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Interactive Buttons */
+        .btn-trigger {
+            width: 100%;
+            background: linear-gradient(135deg, var(--secondary), #8b5cf6);
+            color: var(--text-main);
+            border: none;
+            padding: 1rem;
+            border-radius: 1rem;
+            font-family: var(--font-outfit);
+            font-weight: 700;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(168, 85, 247, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-trigger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+        }
+
+        .btn-trigger:active {
+            transform: translateY(0);
+        }
+
+        .btn-trigger.running {
+            background: #1e293b;
+            border: 1px solid var(--border-glow);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Stats visual panel */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-value.active-green {
+            color: var(--accent);
+        }
+
+        /* Progress logs console */
+        .log-box {
+            background: #050810;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            height: 140px;
+            overflow-y: auto;
+            color: #10b981;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .log-line {
+            line-height: 1.3;
+        }
+
+        .log-line.system { color: #38bdf8; }
+        .log-line.warning { color: #f59e0b; }
+
+        /* Footnotes info */
+        .info-bullets {
+            list-style: none;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+
+        .info-bullets li {
+            position: relative;
+            padding-left: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-bullets li::before {
+            content: "✓";
+            color: var(--accent);
+            position: absolute;
+            left: 0;
+        }
+
+        /* RAM Gauge visual */
+        .ram-gauge {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .ram-fill {
+            height: 100%;
+            width: 35%;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            border-radius: 99px;
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 4rem;
+        }
+
+        footer strong {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">1C</div>
+            <div class="logo-text">1Connector Studio</div>
+            <div class="logo-badge">Containers View</div>
+        </div>
+        <div class="logo-badge" style="border-color: var(--primary-glow); color: var(--primary); background: rgba(56,189,248,0.08)">
+            Orchestration visualizer
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Sơ Đồ Vận Hành Container Toàn Diện</h1>
+            <p>Trình giả lập chu kỳ sống tương tác: Xem cách thức bộ điều hành Platform khởi sinh, chuyển truyền dữ liệu và tiêu hủy các container Connector động trên VPS của bạn.</p>
+        </section>
+
+        <!-- Main Dashboard Split Grid -->
+        <div class="simulator-grid">
+            
+            <!-- Left Panel: Interactive Visualizer Canvas -->
+            <div class="canvas-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="font-size: 1.35rem; font-weight: 700;">Hạ Tầng Ảo VPS Host (34.69.59.39)</h2>
+                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); background: rgba(16,185,129,0.08); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(16,185,129,0.15)">
+                        ● System Healthy
+                    </div>
+                </div>
+
+                <!-- VPS Host Visual Box -->
+                <div class="vps-box">
+                    <span class="vps-badge">Docker Daemon Workspace</span>
+
+                    <!-- Layer 1: Permanent Services (Stateful / Management) -->
+                    <div class="plane-section permanent">
+                        <div class="plane-title blue">
+                            <span>🧠</span> Cấu phần chạy thường trực (Stateful Services - 24/7)
+                        </div>
+                        <div class="containers-row">
+                            <!-- Traefik/Socat Proxy -->
+                            <div class="container-block active">
+                                <div class="icon">🔗</div>
+                                <div class="name">Traefik + Socat</div>
+                                <div class="state-text"><span class="status-indicator"></span>Active: 8010</div>
+                            </div>
+                            <!-- Airbyte Webapp -->
+                            <div class="container-block active">
+                                <div class="icon">🖥️</div>
+                                <div class="name">Platform Webapp</div>
+                                <div class="state-text"><span class="status-indicator"></span>UI Service</div>
+                            </div>
+                            <!-- Airbyte Server -->
+                            <div class="container-block active">
+                                <div class="icon">📡</div>
+                                <div class="name">Platform Server</div>
+                                <div class="state-text"><span class="status-indicator"></span>Core API</div>
+                            </div>
+                            <!-- Temporal Scheduler -->
+                            <div class="container-block active">
+                                <div class="icon">⏱️</div>
+                                <div class="name">Temporal Engine</div>
+                                <div class="state-text"><span class="status-indicator"></span>Workflow</div>
+                            </div>
+                            <!-- Local DB -->
+                            <div class="container-block active">
+                                <div class="icon">🗄️</div>
+                                <div class="name">Metadata DB</div>
+                                <div class="state-text"><span class="status-indicator"></span>PostgreSQL</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 2: Dynamic Connectors (On-demand Ephemeral plane) -->
+                    <div class="plane-section ephemeral">
+                        <div class="plane-title purple">
+                            <span>⚡</span> Cổng xử lý dữ liệu động (On-Demand Connectors - Ephemeral)
+                        </div>
+                        
+                        <!-- Idle Placeholder Text -->
+                        <div id="idle-placeholder" style="color: var(--text-muted); font-size: 1.05rem; text-align: center; font-weight: 300; transition: opacity 0.3s;">
+                            💤 Hệ thống đang rảnh rỗi. Không có container Connector nào chạy.<br>
+                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.2);">Nhấn nút "Kích hoạt Luồng Đồng bộ" bên phải để mô phỏng</span>
+                        </div>
+
+                        <!-- Active Connector Container Pair -->
+                        <div id="connector-cluster" class="dynamic-connector-box">
+                            <!-- Source Connector -->
+                            <div class="dynamic-container">
+                                <span class="badge">Source Node</span>
+                                <div class="icon">🔌</div>
+                                <div class="name">Source MySQL</div>
+                                <div class="image-tag">airbyte/source-mysql:latest</div>
+                            </div>
+
+                            <!-- Pipe -->
+                            <div id="data-pipe-line" class="data-pipe">
+                                <div class="data-packet"></div>
+                            </div>
+
+                            <!-- Destination Connector -->
+                            <div class="dynamic-container destination">
+                                <span class="badge">Destination Node</span>
+                                <div class="icon">💾</div>
+                                <div class="name">Custom ClickHouse</div>
+                                <div class="image-tag">membeedev/destination-clickhouse:staging</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Sidebar Control Panel -->
+            <div class="control-panel">
+                
+                <!-- Action trigger card -->
+                <div class="action-card" style="border-color: rgba(192, 132, 252, 0.3);">
+                    <div class="action-title" style="color: var(--secondary);">
+                        <span>🎮</span> Bảng điều khiển giả lập
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                        Nhấn nút dưới đây để kích hoạt quy trình điều phối và chứng kiến chu kỳ khởi sinh - xóa bỏ container.
+                    </p>
+                    <button id="btn-sync" class="btn-trigger" onclick="runSimulation()">
+                        🚀 Kích hoạt Luồng Đồng bộ
+                    </button>
+                </div>
+
+                <!-- Live stats card -->
+                <div class="action-card">
+                    <div class="action-title">
+                        <span>📊</span> Thống kê Tài nguyên VPS
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Trạng thái hệ thống:</span>
+                        <span id="sys-status" class="stat-value">Rảnh rỗi (Idle)</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Đang chạy (Containers):</span>
+                        <span id="active-containers" class="stat-value active-green">5 thường trực / 0 động</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Bộ nhớ RAM tiêu thụ:</span>
+                        <span id="ram-percentage" class="stat-value">35% (~5.6 GB / 16 GB)</span>
+                    </div>
+                    <div class="ram-gauge">
+                        <div id="ram-fill-bar" class="ram-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Simulation Real-time Logs Console -->
+                <div class="action-card">
+                    <div class="action-title">
+                        <span>📟</span> Ghi nhận sự kiện hệ thống
+                    </div>
+                    <div id="console-log" class="log-box">
+                        <div class="log-line system">[System] Sẵn sàng nhận lệnh điều phối...</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Architectural Insights section -->
+        <section class="canvas-card" style="background: var(--card-bg);">
+            <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center;">🛡️ Lợi Thế Thiết Kế Tuyệt Đối Của Kiến Trúc</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                <div style="background: rgba(15, 23, 42, 0.5); padding: 1.5rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                    <h3 style="color: var(--primary); font-size: 1.15rem; margin-bottom: 0.5rem;">⚡ Bảo vệ RAM & Tránh quá tải</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">
+                        Nhờ việc giải phóng ngay các container connector sau khi hoàn tất đồng bộ, VPS của bạn hoàn toàn tránh được rủi ro cạn kiệt tài nguyên hệ thống. Nó giải phóng hoàn toàn RAM cho các ứng dụng WordPress hay MariaDB của bạn chạy ổn định 100%.
+                    </p>
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.5); padding: 1.5rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                    <h3 style="color: var(--secondary); font-size: 1.15rem; margin-bottom: 0.5rem;">🔒 Cách ly bảo mật tuyệt đối</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">
+                        Mỗi luồng đồng bộ chạy trong môi trường sandbox của container độc lập. Lỗi xảy ra trong code connector (như tràn bộ đệm hay lỗi thư viện) hoàn toàn bị cô lập trong container đó và không thể làm sập hoặc ảnh hưởng đến các cấu phần khác của máy chủ.
+                    </p>
+                </div>
+                <div style="background: rgba(15, 23, 42, 0.5); padding: 1.5rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                    <h3 style="color: var(--accent); font-size: 1.15rem; margin-bottom: 0.5rem;">🔄 Đơn giản hóa việc nâng cấp</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">
+                        Bạn có thể thoải mái sửa code, đóng gói và thử nghiệm ảnh <code style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">staging</code> của clickhouse connector hàng chục lần một ngày mà không cần khởi động lại (restart) giao diện Web hay làm đứt quãng bất cứ phiên đồng bộ nào khác đang diễn ra.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        Thiết kế bởi <strong>Antigravity AI Agent</strong> cho hệ sinh thái đồng bộ dữ liệu cao cấp <strong>1Connector Studio</strong>.
+    </footer>
+
+    <script>
+        const btnSync = document.getElementById('btn-sync');
+        const idlePlaceholder = document.getElementById('idle-placeholder');
+        const connectorCluster = document.getElementById('connector-cluster');
+        const dataPipeLine = document.getElementById('data-pipe-line');
+        const consoleLog = document.getElementById('console-log');
+        
+        const sysStatus = document.getElementById('sys-status');
+        const activeContainers = document.getElementById('active-containers');
+        const ramPercentage = document.getElementById('ram-percentage');
+        const ramFillBar = document.getElementById('ram-fill-bar');
+
+        let isRunning = false;
+
+        function addLog(text, type = 'default') {
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            const time = new Date().toLocaleTimeString();
+            line.innerText = `[${time}] ${text}`;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function runSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+
+            // Step 1: Triggering
+            btnSync.innerText = '⏳ Đang đồng bộ...';
+            btnSync.classList.add('running');
+            
+            addLog('Lệnh đồng bộ được gửi từ Web UI...', 'system');
+            sysStatus.innerText = 'Khởi động luồng (Starting Sync)';
+            sysStatus.style.color = 'var(--secondary)';
+
+            // Step 2: Temporal & Worker Orchestrator
+            setTimeout(() => {
+                addLog('Temporal nhận sự kiện -> Điều phối sang Platform Worker');
+                addLog('Platform Worker truy xuất Docker Socket nội bộ...');
+            }, 1000);
+
+            // Step 3: Spinning up containers dynamically
+            setTimeout(() => {
+                addLog('Khởi sinh container Source: [airbyte/source-mysql:latest] (STATUS: Running)', 'system');
+                addLog('Khởi sinh container Destination: [membeedev/destination-clickhouse:staging] (STATUS: Running)', 'system');
+                
+                // Show dynamic containers with glow animation
+                idlePlaceholder.style.display = 'none';
+                connectorCluster.classList.add('running');
+
+                sysStatus.innerText = 'Đang đồng bộ (Syncing Data)';
+                sysStatus.style.color = 'var(--accent)';
+                activeContainers.innerText = '5 thường trực / 2 động';
+                
+                // Spike RAM consumption simulation
+                ramPercentage.innerText = '52% (~8.3 GB / 16 GB)';
+                ramPercentage.style.color = 'var(--warning)';
+                ramFillBar.style.width = '52%';
+                ramFillBar.style.background = 'linear-gradient(to right, var(--primary), var(--warning))';
+            }, 2500);
+
+            // Step 4: Activating Pipe & Emitting Data
+            setTimeout(() => {
+                addLog('Khai báo đường ống Standard Pipe (stdout -> stdin) thành công');
+                addLog('Đang chuyển truyền gói tin dữ liệu...', 'system');
+                dataPipeLine.classList.add('active');
+            }, 4000);
+
+            // Step 5: Transfer data logs
+            setTimeout(() => {
+                addLog(' MySQL Source emitted: 145,000 records');
+                addLog(' ClickHouse Destination received and wrote: 145,000 records (Bulk loaded)');
+            }, 6000);
+
+            // Step 6: Completing Sync
+            setTimeout(() => {
+                addLog('Hoàn tất đồng bộ dữ liệu (Success Status: 100%)', 'system');
+                addLog('Tiến hành dọn dẹp hạ tầng: docker stop & docker rm...');
+                dataPipeLine.classList.remove('active');
+            }, 8000);
+
+            // Step 7: Killing & Removing containers, freeing RAM
+            setTimeout(() => {
+                addLog('Tiêu hủy thành công container Source MySQL.');
+                addLog('Tiêu hủy thành công container ClickHouse Destination.');
+                addLog('Giải phóng hoàn toàn bộ nhớ đệm RAM.', 'system');
+
+                // Fade out connectors and restore idle state
+                connectorCluster.classList.remove('running');
+                setTimeout(() => {
+                    idlePlaceholder.style.display = 'block';
+                }, 500);
+
+                // Restore resource stats
+                sysStatus.innerText = 'Rảnh rỗi (Idle)';
+                sysStatus.style.color = '';
+                activeContainers.innerText = '5 thường trực / 0 động';
+                ramPercentage.innerText = '35% (~5.6 GB / 16 GB)';
+                ramPercentage.style.color = '';
+                ramFillBar.style.width = '35%';
+                ramFillBar.style.background = '';
+
+                // Restore trigger button
+                btnSync.innerText = '🚀 Kích hoạt Luồng Đồng bộ';
+                btnSync.classList.remove('running');
+                isRunning = false;
+            }, 9500);
+        }
+    </script>
+</body>
+</html>

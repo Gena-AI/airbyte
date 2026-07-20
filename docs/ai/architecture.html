@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airbyte Decoupled Architecture - 1Connector Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0f1d;
+            --card-bg: rgba(16, 24, 48, 0.45);
+            --border-glow: rgba(56, 189, 248, 0.2);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --secondary: #a855f7;
+            --secondary-glow: rgba(168, 85, 247, 0.4);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.4);
+            --font-outfit: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: var(--font-outfit);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header Style */
+        header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 15, 29, 0.7);
+            backdrop-filter: var(--glass-blur);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--bg-dark);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-badge {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: var(--primary);
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Container & Navigation */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ffffff, #38bdf8, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        /* Premium Decoupled Section */
+        .split-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (max-width: 968px) {
+            .split-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            backdrop-filter: var(--glass-blur);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .glass-card.platform::before {
+            background: linear-gradient(to right, var(--primary), var(--primary-glow));
+        }
+
+        .glass-card.connector::before {
+            background: linear-gradient(to right, var(--secondary), var(--secondary-glow));
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .glass-card.platform:hover {
+            box-shadow: 0 15px 40px rgba(56, 189, 248, 0.1);
+        }
+
+        .glass-card.connector:hover {
+            box-shadow: 0 15px 40px rgba(168, 85, 247, 0.1);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+        }
+
+        .card-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .platform .card-title {
+            color: var(--primary);
+        }
+
+        .connector .card-title {
+            color: var(--secondary);
+        }
+
+        .role-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            padding: 0.2rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .bullet-list {
+            list-style: none;
+            margin-top: 1.5rem;
+        }
+
+        .bullet-list li {
+            position: relative;
+            padding-left: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .bullet-list li strong {
+            color: var(--text-main);
+        }
+
+        .bullet-list li::before {
+            content: "✦";
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .platform .bullet-list li::before {
+            color: var(--primary);
+        }
+
+        .connector .bullet-list li::before {
+            color: var(--secondary);
+        }
+
+        /* Visual Interactive Canvas / SVG Section */
+        .visualizer-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            margin-bottom: 4rem;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .visualizer-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .visualizer-header h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .visualizer-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* SVG Dynamic Diagram */
+        .diagram-container {
+            width: 100%;
+            overflow-x: auto;
+            background: rgba(5, 8, 16, 0.5);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            justify-content: center;
+        }
+
+        .arch-svg {
+            width: 100%;
+            max-width: 950px;
+            height: auto;
+        }
+
+        /* SVG Interactivity & Animations */
+        .svg-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .svg-node:hover .node-bg {
+            fill: rgba(255, 255, 255, 0.08);
+            stroke-width: 2px;
+        }
+
+        .svg-node:hover .node-text {
+            fill: #ffffff;
+        }
+
+        .flow-line {
+            stroke-dasharray: 8;
+            animation: dash 30s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        .glow-pulse {
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% {
+                r: 4px;
+                opacity: 0.5;
+            }
+            100% {
+                r: 8px;
+                opacity: 0.9;
+                filter: drop-shadow(0 0 8px var(--primary));
+            }
+        }
+
+        /* Interactive Info Box */
+        .node-info-panel {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(10, 15, 29, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .info-panel-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Tech Specs Grid */
+        .matrix-section h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tech-matrix {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .tech-matrix th, .tech-matrix td {
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+        }
+
+        .tech-matrix th {
+            background: rgba(255, 255, 255, 0.02);
+            font-weight: 600;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+
+        .tech-matrix td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .tech-matrix tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tech-matrix tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+            color: var(--text-main);
+        }
+
+        .tech-matrix td strong {
+            color: var(--text-main);
+        }
+
+        /* Interactive Playground Code Blocks */
+        .cheatsheet-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .cheatsheet-section h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-outfit);
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(56, 189, 248, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.15);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-container {
+            position: relative;
+            background: #050810;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            overflow-x: auto;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-family: var(--font-outfit);
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        footer strong {
+            color: var(--primary);
+        }
+
+        /* Token colors for syntax highlights */
+        .token-comment { color: #6272a4; }
+        .token-keyword { color: #ff79c6; }
+        .token-string { color: #f1fa8c; }
+        .token-number { color: #bd93f9; }
+        .token-function { color: #50fa7b; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">1C</div>
+            <div class="logo-text">1Connector Studio</div>
+            <div class="logo-badge">Staging Stack</div>
+        </div>
+        <div class="logo-badge" style="border-color: var(--secondary-glow); color: #c084fc; background: rgba(168,85,247,0.08)">
+            Decoupled Architecture
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Kiến Trúc Tách Biệt Tuyệt Đẹp Của Airbyte</h1>
+            <p>Khám phá bản chất thiết kế mở rộng tối cao: Phân tách rõ ràng giữa Bộ não điều khiển trung tâm (Platform) và Cổng xử lý dữ liệu độc lập (Connector).</p>
+        </section>
+
+        <!-- The Decoupled Split Grid -->
+        <section class="split-grid">
+            
+            <!-- Left Card: Platform -->
+            <div class="glass-card platform">
+                <div class="card-icon">🧠</div>
+                <h2 class="card-title">Airbyte Platform <span class="role-badge">Bộ Não / Control Plane</span></h2>
+                <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1.5rem;">
+                    Đóng vai trò là hệ điều hành và trung tâm chỉ huy trung tâm. Quản lý toàn bộ cấu hình, lịch trình chạy, phân quyền, giao diện người dùng, và theo dõi log.
+                </p>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.5rem 0;">
+                <ul class="bullet-list">
+                    <li><strong>Quản lý Vận hành:</strong> Cung cấp Web UI tuyệt đẹp trên cổng <code style="font-family: var(--font-mono); color: var(--primary);">8010</code>, định tuyến an sau qua Traefik HTTPS.</li>
+                    <li><strong>Lịch trình (Scheduling):</strong> Lên kế hoạch tự động kích hoạt các luồng đồng bộ (Sync Jobs).</li>
+                    <li><strong>Quản lý Trạng thái:</strong> Lưu trữ trạng thái gia tăng (Incremental State) để đồng bộ thông minh không trùng lặp.</li>
+                    <li><strong>Orchestrator:</strong> Triển khai, giám sát và tắt các container Connector trên VPS một cách tự động khi hoàn thành nhiệm vụ.</li>
+                </ul>
+            </div>
+
+            <!-- Right Card: Connector -->
+            <div class="glass-card connector">
+                <div class="card-icon">🔌</div>
+                <h2 class="card-title">Airbyte Connector <span class="role-badge">Công Cụ / Execution Plane</span></h2>
+                <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1.5rem;">
+                    Là các khối logic độc lập, đóng gói hoàn chỉnh dưới dạng các container Docker. Nơi chúng ta trực tiếp tùy biến, nâng cấp cổng Clickhouse hoặc viết connector mới.
+                </p>
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 1.5rem 0;">
+                <ul class="bullet-list">
+                    <li><strong>Tách biệt Tuyệt đối (Decoupled):</strong> Không can thiệp vào mã nguồn Platform. Lập trình độc lập trong thư mục <code style="font-family: var(--font-mono); color: var(--secondary);">airbyte-integrations/connectors/</code>.</li>
+                    <li><strong>Cơ chế "Gọi-Khi-Cần" (On-Demand):</strong> Không chạy thường trực 24/7 trên VPS để tiết kiệm tối đa RAM. Chỉ khởi chạy khi được Platform ra lệnh và tắt ngay sau khi xong việc.</li>
+                    <li><strong>Giao tiếp Dòng lệnh (CLI-based):</strong> Trao đổi thông tin chuẩn hóa qua luồng Standard I/O (STDOUT, STDERR) với các lệnh <code style="font-family: var(--font-mono); color: var(--secondary);">spec</code>, <code style="font-family: var(--font-mono); color: var(--secondary);">check</code>, <code style="font-family: var(--font-mono); color: var(--secondary);">read</code>, <code style="font-family: var(--font-mono); color: var(--secondary);">write</code>.</li>
+                </ul>
+            </div>
+
+        </section>
+
+        <!-- Interactive Visualizer -->
+        <section class="visualizer-section">
+            <div class="visualizer-header">
+                <h2>Bản Đồ Vận Hành Tương Tác 1Connector</h2>
+                <p>Nhấp vào bất kỳ nút (node) nào trong sơ đồ dưới đây để xem vai trò chi tiết trong luồng hoạt động</p>
+            </div>
+
+            <div class="diagram-container">
+                <svg class="arch-svg" viewBox="0 0 950 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Flow Line Paths with dash animation -->
+                    <path d="M160 200 H300" stroke="url(#gradient-flow-1)" stroke-width="2" class="flow-line" />
+                    <path d="M430 200 H570" stroke="url(#gradient-flow-2)" stroke-width="2" class="flow-line" />
+                    <path d="M700 200 H840" stroke="url(#gradient-flow-3)" stroke-width="2" class="flow-line" />
+
+                    <!-- Gradients -->
+                    <defs>
+                        <linearGradient id="gradient-flow-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#38bdf8" />
+                            <stop offset="100%" stop-color="#a855f7" />
+                        </linearGradient>
+                        <linearGradient id="gradient-flow-2" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#a855f7" />
+                            <stop offset="100%" stop-color="#10b981" />
+                        </linearGradient>
+                        <linearGradient id="gradient-flow-3" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#10b981" />
+                            <stop offset="100%" stop-color="#38bdf8" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Connections indicators -->
+                    <circle cx="230" cy="200" r="5" fill="#38bdf8" class="glow-pulse" />
+                    <circle cx="500" cy="200" r="5" fill="#a855f7" class="glow-pulse" />
+                    <circle cx="770" cy="200" r="5" fill="#10b981" class="glow-pulse" />
+
+                    <!-- Node 1: Local IDE (Developer) -->
+                    <g class="svg-node" onclick="showNodeInfo('node-ide')">
+                        <rect class="node-bg" x="30" y="140" width="130" height="120" rx="16" fill="rgba(30,41,59,0.7)" stroke="#38bdf8" stroke-width="1.5" />
+                        <text x="95" y="180" font-family="Outfit" font-size="28" text-anchor="middle">💻</text>
+                        <text class="node-text" x="95" y="215" font-family="Outfit" font-weight="600" font-size="14" fill="#f1f5f9" text-anchor="middle">Local IDE / Code</text>
+                        <text x="95" y="235" font-family="Outfit" font-size="11" fill="#94a3b8" text-anchor="middle">Developer Workspace</text>
+                    </g>
+
+                    <!-- Node 2: CI/CD Workflow -->
+                    <g class="svg-node" onclick="showNodeInfo('node-cicd')">
+                        <rect class="node-bg" x="300" y="140" width="130" height="120" rx="16" fill="rgba(30,41,59,0.7)" stroke="#a855f7" stroke-width="1.5" />
+                        <text x="365" y="180" font-family="Outfit" font-size="28" text-anchor="middle">🚀</text>
+                        <text class="node-text" x="365" y="215" font-family="Outfit" font-weight="600" font-size="14" fill="#f1f5f9" text-anchor="middle">GitHub Actions</text>
+                        <text x="365" y="235" font-family="Outfit" font-size="11" fill="#94a3b8" text-anchor="middle">Build dockerBuildx</text>
+                    </g>
+
+                    <!-- Node 3: Docker Hub Registry -->
+                    <g class="svg-node" onclick="showNodeInfo('node-registry')">
+                        <rect class="node-bg" x="570" y="140" width="130" height="120" rx="16" fill="rgba(30,41,59,0.7)" stroke="#10b981" stroke-width="1.5" />
+                        <text x="635" y="180" font-family="Outfit" font-size="28" text-anchor="middle">📦</text>
+                        <text class="node-text" x="635" y="215" font-family="Outfit" font-weight="600" font-size="14" fill="#f1f5f9" text-anchor="middle">Docker Hub</text>
+                        <text x="635" y="235" font-family="Outfit" font-size="11" fill="#94a3b8" text-anchor="middle">Image Registry</text>
+                    </g>
+
+                    <!-- Node 4: VPS Staging Engine -->
+                    <g class="svg-node" onclick="showNodeInfo('node-vps')">
+                        <rect class="node-bg" x="840" y="140" width="130" height="120" rx="16" fill="rgba(30,41,59,0.7)" stroke="#38bdf8" stroke-width="1.5" />
+                        <text x="905" y="180" font-family="Outfit" font-size="28" text-anchor="middle">☁️</text>
+                        <text class="node-text" x="905" y="215" font-family="Outfit" font-weight="600" font-size="14" fill="#f1f5f9" text-anchor="middle">VPS Staging / UI</text>
+                        <text x="905" y="235" font-family="Outfit" font-size="11" fill="#94a3b8" text-anchor="middle">abctl & Traefik</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Display Dynamic Information Boxes -->
+            <div id="node-ide" class="node-info-panel" style="display: block; border-color: var(--primary);">
+                <div class="info-panel-title" style="color: var(--primary);">💻 Local IDE / Code Workspace (Phát triển Connector)</div>
+                <p style="color: var(--text-muted);">
+                    Nơi nhà phát triển trực tiếp làm việc trên mã nguồn của connector (<code style="font-family: var(--font-mono); color: #fff;">airbyte-integrations/connectors/destination-clickhouse</code>). Bạn tùy biến các tính năng ghi dữ liệu, sữa đổi logic nạp bulk hay điều chỉnh tệp cấu hình Java/Kotlin. Toàn bộ mã nguồn Platform trung tâm được bảo lưu hoàn toàn nguyên vẹn.
+                </p>
+            </div>
+
+            <div id="node-cicd" class="node-info-panel" style="border-color: var(--secondary);">
+                <div class="info-panel-title" style="color: var(--secondary);">🚀 GitHub Actions CI/CD Pipeline (Đóng gói Tự động)</div>
+                <p style="color: var(--text-muted);">
+                    Khi bạn đẩy code mới lên nhánh <code style="font-family: var(--font-mono); color: #fff;">staging</code>, GitHub Actions sẽ tự động kích hoạt. Nó biên dịch dự án bằng JDK 21 và chạy tác vụ Docker chuyên dụng của dự án: <code style="font-family: var(--font-mono); color: #fff;">./gradlew :airbyte-integrations:connectors:destination-clickhouse:dockerBuildx</code> để đóng gói code thành một Docker Image staging siêu nhẹ.
+                </p>
+            </div>
+
+            <div id="node-registry" class="node-info-panel" style="border-color: var(--accent);">
+                <div class="info-panel-title" style="color: var(--accent);">📦 Docker Hub Image Registry (Kho Lưu Trữ Độc Lập)</div>
+                <p style="color: var(--text-muted);">
+                    Ảnh Docker đóng gói hoàn tất sẽ được tự động gắn thẻ và đẩy trực tiếp lên kho chứa Docker Hub cá nhân của bạn: <code style="font-family: var(--font-mono); color: #fff;">membeedev/destination-clickhouse:staging</code>. Nơi này đóng vai trò phân phối độc lập, cho phép bất kỳ hệ thống Airbyte Platform nào ở bất cứ đâu kéo về cài đặt chỉ bằng một cú nhấp chuột.
+                </p>
+            </div>
+
+            <div id="node-vps" class="node-info-panel" style="border-color: var(--primary);">
+                <div class="info-panel-title" style="color: var(--primary);">☁️ VPS Staging Server (Vận Hành & Điều Phối)</div>
+                <p style="color: var(--text-muted);">
+                    Trái tim vận hành thực tế. Công cụ <strong style="color: #fff;">abctl</strong> quản trị hạ tầng Platform chạy an toàn trên cổng 8010. Khi bạn yêu cầu chạy một luồng đồng bộ, Airbyte Platform trên VPS sẽ tự động ra lệnh kéo ảnh <code style="font-family: var(--font-mono); color: #fff;">membeedev/destination-clickhouse:staging</code> từ Docker Hub về, tạo một container ngắn hạn để ghi dữ liệu trực tiếp vào database ClickHouse của bạn rồi dọn dẹp sạch sẽ sau khi hoàn tất.
+                </p>
+            </div>
+        </section>
+
+        <!-- Feature Matrix Table Comparison -->
+        <section class="matrix-section">
+            <h2>So Sánh Chi Tiết Vai Trò Cấu Phần</h2>
+            <table class="tech-matrix">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Tiêu chí so sánh</th>
+                        <th style="width: 37.5%; color: var(--primary);">Airbyte Platform (Khung điều khiển)</th>
+                        <th style="width: 37.5%; color: var(--secondary);">Airbyte Connector (Công cụ xử lý)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Vai trò chính</strong></td>
+                        <td>Điều phối, quản trị cấu hình, lên lịch biểu, giám sát log, hiển thị UI.</td>
+                        <td>Trực tiếp đọc dữ liệu từ nguồn (Source) hoặc ghi dữ liệu xuống đích (Destination).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Công nghệ sử dụng</strong></td>
+                        <td>React (Frontend Webapp), Temporal Workflow, Java (Micronaut APIs), MinIO.</td>
+                        <td>Kotlin / Java (sử dụng Bulk CDK của Gena-AI) hoặc Python (Airbyte CDK).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Chu kỳ sống trên VPS</strong></td>
+                        <td>Chạy thường trực 24/7 như các Daemon Services để lắng nghe yêu cầu và Web UI.</td>
+                        <td>Chỉ chạy khi có lệnh đồng bộ (On-Demand), tự động tắt và xóa container ngay khi xong.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cách thức triển khai</strong></td>
+                        <td>Cài đặt bằng công cụ chuẩn <code style="font-family: var(--font-mono);">abctl</code> kéo từ các Docker images gốc ổn định.</td>
+                        <td>Đóng gói tùy biến riêng biệt thành ảnh Docker, đẩy lên Docker Hub thông qua CI/CD GitHub.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Nơi thực hiện code/nâng cấp</strong></td>
+                        <td>Rất ít khi đụng vào mã nguồn platform trừ khi nâng cấp tính năng lõi của tổng hệ thống.</td>
+                        <td><strong>Nơi chúng ta trực tiếp nâng cấp hàng ngày</strong> trong các thư mục connectors của repo.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Dynamic Cheat-Sheet Playground -->
+        <section class="cheatsheet-section">
+            <h2>Sổ Tay Vận Hành & Lập Trình Phát Triển</h2>
+            <div class="code-tabs">
+                <button class="tab-btn active" onclick="switchTab('tab-dev')">💻 Lập trình & Build</button>
+                <button class="tab-btn" onclick="switchTab('tab-platform')">🧠 Quản lý Platform UI</button>
+                <button class="tab-btn" onclick="switchTab('tab-test')">🧪 Lệnh Kiểm thử Connector</button>
+            </div>
+
+            <!-- Tab 1 -->
+            <div id="tab-dev" class="tab-content active">
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 1rem;">
+                    Sử dụng các câu lệnh sau tại máy tính Local để phát triển, đóng gói và đồng bộ hóa Connector Clickhouse:
+                </p>
+                <div class="code-container">
+                    <button class="copy-btn" onclick="copyCode('code-dev-text')">Copy</button>
+                    <pre id="code-dev-text"><span class="token-comment"># 1. Di chuyển vào thư mục connector Clickhouse</span>
+<span class="token-keyword">cd</span> airbyte-integrations/connectors/destination-clickhouse
+
+<span class="token-comment"># 2. Biên dịch và Đóng gói Docker Image bằng Gradle với task chính xác</span>
+./gradlew :airbyte-integrations:connectors:destination-clickhouse:dockerBuildx
+
+<span class="token-comment"># 3. Gắn nhãn tag staging và đẩy lên tài khoản Docker Hub của bạn</span>
+docker tag airbyte/destination-clickhouse:dev membeedev/destination-clickhouse:staging
+docker push membeedev/destination-clickhouse:staging</pre>
+                </div>
+            </div>
+
+            <!-- Tab 2 -->
+            <div id="tab-platform" class="tab-content">
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 1rem;">
+                    Các câu lệnh hữu ích để quản lý, lấy thông tin đăng nhập hoặc nâng cấp cụm Airbyte Platform trên máy chủ VPS:
+                </p>
+                <div class="code-container">
+                    <button class="copy-btn" onclick="copyCode('code-plat-text')">Copy</button>
+                    <pre id="code-plat-text"><span class="token-comment"># 1. Truy vấn mật khẩu đăng nhập của Airbyte Web UI trên VPS</span>
+abctl local credentials
+
+<span class="token-comment"># 2. Xem trạng thái các dịch vụ pod Airbyte đang vận hành trên cụm VPS</span>
+abctl local status
+
+<span class="token-comment"># 3. Nâng cấp cụm Airbyte Platform lên phiên bản mới nhất</span>
+abctl local install --host 1connector.hub.vn --port 8010 --low-resource-mode</pre>
+                </div>
+            </div>
+
+            <!-- Tab 3 -->
+            <div id="tab-test" class="tab-content">
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 1rem;">
+                    Chạy các lệnh kiểm thử đặc tả (spec) và kiểm thử khả năng kết nối cơ sở dữ liệu Clickhouse thực tế ngay trên VPS:
+                </p>
+                <div class="code-container">
+                    <button class="copy-btn" onclick="copyCode('code-test-text')">Copy</button>
+                    <pre id="code-test-text"><span class="token-comment"># 1. Trích xuất đặc tả đầu vào của Connector trên VPS (Kiểm tra lỗi DI khởi động)</span>
+docker run --rm membeedev/destination-clickhouse:staging spec
+
+<span class="token-comment"># 2. Chạy kiểm tra kết nối (Check Connection) nạp tệp cấu hình JSON thật</span>
+docker run --rm \
+  -v /home/vmxclaw/airbyte-staging/test-config.json:/airbyte/test-config.json \
+  membeedev/destination-clickhouse:staging check --config /airbyte/test-config.json</pre>
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <footer>
+        Thiết kế bởi <strong>Antigravity AI Agent</strong> cho hệ sinh thái đồng bộ dữ liệu cao cấp <strong>1Connector Studio</strong>.
+    </footer>
+
+    <script>
+        // Interactive SVG Node Info triggers
+        function showNodeInfo(nodeId) {
+            // Hide all panels
+            const panels = document.querySelectorAll('.node-info-panel');
+            panels.forEach(p => p.style.display = 'none');
+            
+            // Show target panel with animation
+            const targetPanel = document.getElementById(nodeId);
+            if (targetPanel) {
+                targetPanel.style.display = 'block';
+            }
+
+            // Highlight chosen node
+            const nodes = document.querySelectorAll('.svg-node');
+            nodes.forEach(n => {
+                const rect = n.querySelector('.node-bg');
+                rect.setAttribute('stroke-width', '1.5');
+            });
+            
+            // Bold stroke on active SVG
+            const activeNode = event.currentTarget;
+            if (activeNode) {
+                const rect = activeNode.querySelector('.node-bg');
+                rect.setAttribute('stroke-width', '3');
+            }
+        }
+
+        // Tab switches for cheatsheets
+        function switchTab(tabId) {
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Add active to targets
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Copy to clipboard helper
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.color = 'var(--accent)';
+                btn.style.borderColor = 'var(--accent)';
+                
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
